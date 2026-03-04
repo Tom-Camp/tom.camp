@@ -1,0 +1,10 @@
+services:
+  tcflask:
+    image: t0mc4mp/tom.camp:latest
+    env_file:
+      - ./prod.env
+    volumes: []
+    command: >
+      uv run flask run
+      --host 0.0.0.0
+      --port 5000

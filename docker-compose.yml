@@ -1,0 +1,13 @@
+services:
+  tcflask:
+    image: t0mc4mp/tom.camp:latest
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./.env
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
