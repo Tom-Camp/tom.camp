@@ -53,3 +53,11 @@ def list_posts() -> str:
         service = PostService(session)
         posts = service.list_posts()
         return render_template("posts/list.html", posts=posts)
+
+
+@posts_bp.get("/tag/<string:tag>")
+def list_posts_by_tag(tag: str) -> str:
+    with Session(engine) as session:
+        service = PostService(session)
+        posts = service.list_posts_by_tag(tag)
+        return render_template("posts/list_by_tag.html", posts=posts, tag=tag)
