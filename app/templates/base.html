@@ -3,31 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <title>{% block title %}Tom.Camp{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>
 <body class="min-h-screen bg-white text-gray-900">
 
-    <header class="border-b border-gray-200">
-        <nav class="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
-            <a href="/" class="font-semibold text-lg tracking-tight">Tom.Camp</a>
-            <ul class="flex gap-6 text-sm text-gray-600">
-                {% block nav_items %}{% endblock %}
-            </ul>
-        </nav>
-    </header>
+    {% include 'common/header.html' %}
 
     <main class="mx-auto max-w-5xl px-4 py-10">
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="border-t border-gray-200 mt-auto">
-        <div class="mx-auto max-w-5xl px-4 py-6 text-sm text-gray-400">
-            {% block footer %}Tom.Camp{% endblock %}
-        </div>
-    </footer>
+    {% include 'common/footer.html' %}
 
     {% block scripts %}{% endblock %}
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            navbar.classList.toggle('scrolled', window.scrollY > 10);
+        }, { passive: true });
+
+        const toggle = document.getElementById('menu-toggle');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const iconOpen = document.getElementById('icon-open');
+        const iconClose = document.getElementById('icon-close');
+        let open = false;
+
+        toggle.addEventListener('click', () => {
+            open = !open;
+            mobileMenu.classList.toggle('hidden', !open);
+            iconOpen.classList.toggle('hidden', open);
+            iconClose.classList.toggle('hidden', !open);
+        });
+    </script>
 </body>
 </html>
