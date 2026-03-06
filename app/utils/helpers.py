@@ -1,5 +1,3 @@
-import json
-
 from app.models.post import Post
 from app.schemas.post_schemas import BodyContent, Link, ReadPost
 
@@ -21,16 +19,15 @@ def truncate_at_boundary(text: str, max_len: int) -> str:
 
 
 def structure_post_response(post: Post) -> ReadPost:
-    post_body = json.loads(post.body) if post and post.body else {}
     links = [
         Link(url=link.get("url"), text=link.get("text"))
-        for link in post_body.get("links", [])
+        for link in post.body.get("links", [])
     ]
-    content = [paragraph for paragraph in post_body.get("paragraphs", [])]
+    content = [paragraph for paragraph in post.body.get("paragraphs", [])]
     return ReadPost(
         title=post.title,
         body=BodyContent(
-            paragraphs=content, links=links, repo=post_body.get("repo", None)
+            paragraphs=content, links=links, repo=post.body.get("repo", None)
         ),
         images=post.images,
         slug=post.slug,

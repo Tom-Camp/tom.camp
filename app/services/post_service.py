@@ -96,9 +96,9 @@ class PostService:
             .offset(skip)
             .limit(limit)
             .order_by(
-                Post.created_date.desc()  # type: ignore[union-attr]
+                Post.created_date.desc()  # type: ignore[attr-defined]
                 if order == "desc"
-                else Post.created_date.asc()  # type: ignore[union-attr]
+                else Post.created_date.asc()  # type: ignore[attr-defined]
             )
         )
         posts = self._db.exec(statement).all()
@@ -115,9 +115,9 @@ class PostService:
             .offset(skip)
             .limit(limit)
             .order_by(
-                Post.created_date.desc()  # type: ignore[union-attr]
+                Post.created_date.desc()  # type: ignore[attr-defined]
                 if order == "desc"
-                else Post.created_date.asc()  # type: ignore[union-attr]
+                else Post.created_date.asc()  # type: ignore[attr-defined]
             )
         )
         posts = self._db.exec(statement).all()

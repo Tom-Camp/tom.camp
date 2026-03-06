@@ -15,21 +15,19 @@ class ModelBase(SQLModel):
     id: uuid.UUID = Field(
         default_factory=uuid.uuid4,
         primary_key=True,
-        index=True,
     )
 
-    created_date: datetime | None = Field(
-        default=None,
-        sa_type=sa.DateTime(timezone=True),
+    created_date: datetime = Field(
+        sa_type=sa.DateTime(timezone=True),  # type: ignore[arg-type]
         sa_column_kwargs={"server_default": func.now()},
         nullable=False,
-        alias="created date",
     )
 
-    updated_date: datetime | None = Field(
-        default=None,
-        sa_type=sa.DateTime(timezone=True),
-        sa_column_kwargs={"server_default": func.now()},
+    updated_date: datetime = Field(
+        sa_type=sa.DateTime(timezone=True),  # type: ignore[arg-type]
+        sa_column_kwargs={
+            "server_default": func.now(),
+            "onupdate": func.now(),
+        },
         nullable=False,
-        alias="last updated",
     )
