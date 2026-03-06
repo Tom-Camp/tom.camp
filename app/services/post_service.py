@@ -1,6 +1,7 @@
 from uuid import UUID
 
 from loguru import logger
+from slugify import slugify
 from sqlalchemy import Sequence
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
@@ -42,7 +43,7 @@ class PostService:
 
     def create_post(self, post: CreatePost) -> Post:
         payload = post.model_dump(exclude={"tags"})
-        new_post = Post(**payload)
+        new_post = Post(**payload, slug=slugify(post.title))
         new_post.tags = self._get_or_create_tags(post.tags)
         self._db.add(new_post)
         self._db.commit()

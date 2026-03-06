@@ -28,7 +28,6 @@ class CreatePost(BaseModel):
     title: str
     body: str
     images: list[str] | None = []
-    slug: str | None = None
     tags: list[str] | None = []
 
 
