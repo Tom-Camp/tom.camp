@@ -1,3 +1,4 @@
+import json
 from typing import Any
 
 from flask import Blueprint, abort, render_template, request
@@ -5,7 +6,8 @@ from loguru import logger
 from slugify import slugify
 from sqlmodel import Session
 
-from app.schemas.post_schemas import CreatePost
+from app.models.post import Post
+from app.schemas.post_schemas import BodyContent, CreatePost, Link, ReadPost
 from app.services.post_service import PostService
 from app.utils.auth import require_admin
 from app.utils.database import engine
@@ -13,17 +15,40 @@ from app.utils.database import engine
 posts_bp = Blueprint("posts", __name__, url_prefix="/posts")
 
 
+def _structure_post_reponse(post: Post) -> ReadPost:
+    post_body = json.loads(post.body) if post and post.body else {}
+    links = [
+        Link(url=link.get("url"), text=link.get("text"))
+        for link in post_body.get("links", [])
+    ]
+    content = [paragraph for paragraph in post_body.get("paragraphs", [])]
+    return ReadPost(
+        title=post.title,
+        body=BodyContent(
+            paragraphs=content, links=links, repo=post_body.get("repo", None)
+        ),
+        images=post.images,
+        slug=post.slug,
+        tags=post.tags,
+        created_date=post.created_date,
+    )
+
+
 @posts_bp.post("/")
 @require_admin
 def create_post() -> tuple[dict, int]:
     data: dict[str, Any] = request.get_json(force=True, silent=True) or {}
-    logger.warning("create_post called with data: {}", data)
+    logger.warning("create_post called with data: {}", data.get("title"))
     if not data.get("title") or not data.get("body"):
         logger.warning("create_post rejected: missing title or body: {}", data)
         abort(400, description="title and body are required")
 
-    post_data = CreatePost(**data)
-    post_data.slug = slugify(data.get("title"))
+    post_data = CreatePost(
+        title=data.get("title"),
+        body=json.dumps(data.get("body", {})),
+        slug=slugify(data.get("title")),
+        tags=data.get("tags", []),
+    )
 
     with Session(engine) as session:
         service = PostService(session)
@@ -37,14 +62,17 @@ def create_post() -> tuple[dict, int]:
 
 
 @posts_bp.get("/<string:slug>")
-def read_post(slug: str) -> dict:
+def read_post(slug: str) -> str:
     with Session(engine) as session:
         service = PostService(session)
-        post = service.get_post(slug)
-        if not post:
+
+        post: Post | None = service.get_post(slug)
+        if post is None:
             logger.warning("get_post: post {} not found", slug)
             abort(404, description="Post not found")
-        return render_template("posts/index.html", post=post)
+
+        full_post = _structure_post_reponse(post=post)  # type: ignore
+        return render_template("posts/index.html", post=full_post)
 
 
 @posts_bp.get("/")

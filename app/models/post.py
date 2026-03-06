@@ -1,10 +1,12 @@
 from uuid import UUID
 
-from pydantic import model_validator
 from sqlalchemy import JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.base import ModelBase
+
+JSONType = JSON().with_variant(JSONB(), "postgresql")
 
 
 class PostTagLink(SQLModel, table=True):  # type: ignore
@@ -15,31 +17,27 @@ class PostTagLink(SQLModel, table=True):  # type: ignore
         ondelete="CASCADE",
     )
     tag_id: UUID = Field(
-        foreign_key="tags.id",
+        foreign_key="tag.id",
         primary_key=True,
         nullable=False,
         ondelete="CASCADE",
     )
 
 
-class Tags(ModelBase, table=True):  # type: ignore
+class Tag(ModelBase, table=True):  # type: ignore
     name: str = Field(..., unique=True)
     posts: list["Post"] = Relationship(back_populates="tags", link_model=PostTagLink)
-
-    @model_validator(mode="before")
-    @classmethod
-    def validate_name(cls, values):
-        name = values.get("name")
-        if name:
-            values["name"] = name.strip().lower()
-        return values
 
 
 class Post(ModelBase, table=True):  # type: ignore
     title: str = Field(..., unique=True)
-    body: str
-    images: list[str] = Field(
+    body: str = Field(
+        default_factory=dict,
+        sa_type=JSONType,
+        nullable=False,
+    )
+    images: list[str] | None = Field(
         default_factory=list, sa_type=JSON, description="List of image filenames"
     )
     slug: str | None = None
-    tags: list[Tags] = Relationship(back_populates="posts", link_model=PostTagLink)
+    tags: list[Tag] = Relationship(back_populates="posts", link_model=PostTagLink)

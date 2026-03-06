@@ -4,7 +4,7 @@ from loguru import logger
 from sqlalchemy import Sequence
 from sqlmodel import Session, select
 
-from app.models.post import Post, Tags
+from app.models.post import Post, Tag
 from app.schemas.post_schemas import CreatePost, UpdatePost
 
 
@@ -26,15 +26,15 @@ class PostService:
                 seen.add(value)
         return normalized
 
-    def _get_or_create_tags(self, tags: list[str] | None) -> list[Tags]:
-        tag_models: list[Tags] = []
+    def _get_or_create_tags(self, tags: list[str] | None) -> list[Tag]:
+        tag_models: list[Tag] = []
         for name in self._normalize_tags(tags):
-            statement = select(Tags).where(Tags.name == name)
+            statement = select(Tag).where(Tag.name == name)
             existing = self._db.exec(statement).first()
             if existing:
                 tag_models.append(existing)
                 continue
-            new_tag = Tags(name=name)
+            new_tag = Tag(name=name)
             self._db.add(new_tag)
             tag_models.append(new_tag)
         return tag_models
@@ -103,7 +103,7 @@ class PostService:
         statement = (
             select(Post)
             .join(Post.tags)
-            .where(Tags.name == tag.strip().lower())
+            .where(Tag.name == tag.strip().lower())
             .offset(skip)
             .limit(limit)
             .order_by(
