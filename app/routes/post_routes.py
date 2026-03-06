@@ -138,10 +138,10 @@ def upload_image(slug: str) -> tuple[dict, int]:
         if not _allowed_file(file.filename):
             abort(400, description="File type not allowed")
 
-        title: str = request.form.get("title", "")
+        caption: str = request.form.get("caption", "")
         alt: str = request.form.get("alt", "")
-        if not title or not alt:
-            abort(400, description="title and alt are required")
+        if not caption or not alt:
+            abort(400, description="caption and alt are required")
 
         safe_name = secure_filename(file.filename)
         # Prefix with post slug to avoid collisions across posts
@@ -155,7 +155,7 @@ def upload_image(slug: str) -> tuple[dict, int]:
             image = service.add_image_to_post(
                 post=post,
                 filename=stored_name,
-                title=title,
+                caption=caption,
                 alt=alt,
             )
         except ValueError as exc:

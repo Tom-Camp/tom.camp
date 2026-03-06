@@ -1,3 +1,4 @@
+from typing import Literal
 from uuid import UUID
 
 from loguru import logger
@@ -16,9 +17,7 @@ class PostService:
         self._db = session
 
     @staticmethod
-    def _normalize_tags(tags: list[str] | None) -> list[str]:
-        if not tags:
-            return []
+    def _normalize_tags(tags: list[str]) -> list[str]:
         normalized: list[str] = []
         seen: set[str] = set()
         for tag in tags:
@@ -28,21 +27,30 @@ class PostService:
                 seen.add(value)
         return normalized
 
-    def _get_or_create_tags(self, tags: list[str] | None) -> list[Tag]:
+    def _get_or_create_tags(self, tags: list[str]) -> list[Tag]:
+        names = self._normalize_tags(tags)
+        if not names:
+            return []
+        existing = self._db.exec(select(Tag).where(Tag.name.in_(names))).all()  # type: ignore[attr-defined]
+        existing_by_name = {t.name: t for t in existing}
         tag_models: list[Tag] = []
-        for name in self._normalize_tags(tags):
-            statement = select(Tag).where(Tag.name == name)
-            existing = self._db.exec(statement).first()
-            if existing:
-                tag_models.append(existing)
-                continue
-            new_tag = Tag(name=name)
-            self._db.add(new_tag)
-            tag_models.append(new_tag)
+        for name in names:
+            if name in existing_by_name:
+                tag_models.append(existing_by_name[name])
+            else:
+                new_tag = Tag(name=name)
+                self._db.add(new_tag)
+                tag_models.append(new_tag)
         return tag_models
 
+    @staticmethod
+    def _order_by(order: Literal["asc", "desc"]):  # type: ignore[return]
+        if order == "desc":
+            return Post.created_date.desc()  # type: ignore[attr-defined]
+        return Post.created_date.asc()  # type: ignore[attr-defined]
+
     def create_post(self, post: CreatePost) -> Post:
-        payload = post.model_dump(exclude={"tags"})
+        payload = post.model_dump(exclude={"tags", "images"})
         new_post = Post(**payload, slug=slugify(post.title))
         new_post.tags = self._get_or_create_tags(post.tags)
         self._db.add(new_post)
@@ -52,7 +60,9 @@ class PostService:
 
     def get_post(self, slug: str) -> Post | None:
         statement = (
-            select(Post).where(Post.slug == slug).options(selectinload(Post.images))
+            select(Post)
+            .where(Post.slug == slug)
+            .options(selectinload(Post.images), selectinload(Post.tags))
         )
         return self._db.exec(statement).first()
 
@@ -89,24 +99,23 @@ class PostService:
         return True
 
     def list_posts(
-        self, skip: int = 0, limit: int = 10, order="desc"
+        self, skip: int = 0, limit: int = 10, order: Literal["asc", "desc"] = "desc"
     ) -> Sequence[Post]:
         statement = (
             select(Post)
             .options(selectinload(Post.images))
             .offset(skip)
             .limit(limit)
-            .order_by(
-                Post.created_date.desc()  # type: ignore[attr-defined]
-                if order == "desc"
-                else Post.created_date.asc()  # type: ignore[attr-defined]
-            )
+            .order_by(self._order_by(order))
         )
-        posts = self._db.exec(statement).all()
-        return posts
+        return self._db.exec(statement).all()
 
     def list_posts_by_tag(
-        self, tag: str, skip: int = 0, limit: int = 10, order="desc"
+        self,
+        tag: str,
+        skip: int = 0,
+        limit: int = 10,
+        order: Literal["asc", "desc"] = "desc",
     ) -> Sequence[Post]:
         statement = (
             select(Post)
@@ -115,21 +124,16 @@ class PostService:
             .options(selectinload(Post.images))
             .offset(skip)
             .limit(limit)
-            .order_by(
-                Post.created_date.desc()  # type: ignore[attr-defined]
-                if order == "desc"
-                else Post.created_date.asc()  # type: ignore[attr-defined]
-            )
+            .order_by(self._order_by(order))
         )
-        posts = self._db.exec(statement).all()
-        return posts
+        return self._db.exec(statement).all()
 
     def add_image_to_post(
         self,
         post: Post,
         filename: str,
-        title: str,
-        alt: str,
+        caption: str | None,
+        alt: str | None,
     ) -> Image:
         existing = self._db.exec(
             select(Image).where(Image.filename == filename)
@@ -139,7 +143,7 @@ class PostService:
 
         image = Image(
             filename=filename,
-            title=title,
+            caption=caption,
             alt=alt,
             post_id=post.id,
         )
