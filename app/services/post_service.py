@@ -5,7 +5,7 @@ from sqlalchemy import Sequence
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from app.models.post import Post, Tag
+from app.models.post import Image, Post, Tag
 from app.schemas.post_schemas import CreatePost, UpdatePost
 
 
@@ -122,3 +122,27 @@ class PostService:
         )
         posts = self._db.exec(statement).all()
         return posts
+
+    def add_image_to_post(
+        self,
+        post: Post,
+        filename: str,
+        title: str,
+        alt: str,
+    ) -> Image:
+        existing = self._db.exec(
+            select(Image).where(Image.filename == filename)
+        ).first()
+        if existing:
+            raise ValueError(f"Image with filename {filename!r} already exists")
+
+        image = Image(
+            filename=filename,
+            title=title,
+            alt=alt,
+            post_id=post.id,
+        )
+        self._db.add(image)
+        self._db.commit()
+        self._db.refresh(image)
+        return image

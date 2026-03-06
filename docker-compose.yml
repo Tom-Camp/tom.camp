@@ -7,7 +7,12 @@ services:
       - ./.env
     networks:
       - app-network
+    volumes:
+      - uploads_data:${UPLOAD_DIR}
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  uploads_data:

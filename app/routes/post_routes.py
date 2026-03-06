@@ -1,17 +1,28 @@
 import json
+from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, render_template, request, send_from_directory
 from loguru import logger
 from slugify import slugify
 from sqlmodel import Session
+from werkzeug.utils import secure_filename
 
 from app.models.post import Post
 from app.schemas.post_schemas import CreatePost, ListPost
 from app.services.post_service import PostService
 from app.utils.auth import require_admin
+from app.utils.config import settings
 from app.utils.database import engine
 from app.utils.helpers import structure_post_response, truncate_at_boundary
+
+ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+UPLOAD_DIR = Path(settings.UPLOAD_DIR)
+
+
+def _allowed_file(filename: str) -> bool:
+    return Path(filename).suffix.lower() in ALLOWED_EXTENSIONS
+
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/posts")
 
@@ -37,7 +48,7 @@ def create_post() -> tuple[dict, int]:
         try:
             post = service.create_post(post_data)
         except ValueError as exc:
-            abort(409, description=str(exc))  # slug already exists
+            abort(409, description=str(exc))
 
         logger.info("Post created: id={} title={!r}", post.id, post.title)
         return post.model_dump(mode="json"), 201
@@ -82,3 +93,52 @@ def list_posts_by_tag(tag: str) -> str:
         service = PostService(session)
         posts = service.list_posts_by_tag(tag)
         return render_template("posts/list_by_tag.html", posts=posts, tag=tag)
+
+
+@posts_bp.post("/<string:slug>/images")
+@require_admin
+def upload_image(slug: str) -> tuple[dict, int]:
+    with Session(engine) as session:
+        service = PostService(session)
+
+        post: Post | None = service.get_post(slug)
+        if post is None:
+            abort(404, description="Post not found")
+
+        file = request.files.get("file")
+        if not file or not file.filename:
+            abort(400, description="No file provided")
+        if not _allowed_file(file.filename):
+            abort(400, description="File type not allowed")
+
+        title: str = request.form.get("title", "")
+        alt: str = request.form.get("alt", "")
+        if not title or not alt:
+            abort(400, description="title and alt are required")
+
+        safe_name = secure_filename(file.filename)
+        # Prefix with post slug to avoid collisions across posts
+        stored_name = f"{slug}__{safe_name}"
+        dest = Path(settings.UPLOAD_DIR) / stored_name
+
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        file.save(dest)
+
+        try:
+            image = service.add_image_to_post(
+                post=post,  # type: ignore
+                filename=stored_name,
+                title=title,
+                alt=alt,
+            )
+        except ValueError as exc:
+            dest.unlink()
+            abort(409, description=str(exc))
+
+        logger.info("Image uploaded: {} → post {!r}", stored_name, post.title)  # type: ignore
+        return image.model_dump(mode="json"), 201
+
+
+@posts_bp.get("/images/<path:filename>")
+def serve_image(filename: str) -> Any:
+    return send_from_directory(UPLOAD_DIR, filename)

@@ -31,7 +31,7 @@ class Tag(ModelBase, table=True):  # type: ignore
 
 class Image(ModelBase, table=True):  # type: ignore
     filename: str = Field(..., unique=True)
-    title: str
+    caption: str
     alt: str
     post_id: UUID = Field(foreign_key="post.id", nullable=False)
     post: "Post" = Relationship(back_populates="images")

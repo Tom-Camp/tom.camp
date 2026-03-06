@@ -10,10 +10,13 @@
     <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 lg:mb-14">
         {% for post in posts %}
             <!-- Card -->
-            <a class="bg-white shadow-md group flex flex-col bg-layer border border-layer-line shadow-2xs rounded-xl hover:shadow-md focus:outline-hidden focus:shadow-md transition" href="#">
+            <a
+                class="bg-white shadow-md group flex flex-col bg-layer border border-layer-line shadow-2xs rounded-xl hover:shadow-md focus:outline-hidden focus:shadow-md transition"
+                href="{{ url_for('posts.read_post', slug=post.slug) }}"
+            >
                 <div class="aspect-w-16 aspect-h-9">
                     {% if post.images %}
-                    <img class="w-full object-cover rounded-t-xl" src="{{ url_for('static', post.image_url) }}" alt="Blog Image">
+                    <img class="w-full object-cover rounded-t-xl" src="{{ url_for('posts.serve_image', filename=post.images[0].filename) }}" alt="{{ post.images[0].alt }}">
                     {% endif %}
                 </div>
                 <div class="p-4 md:p-5">

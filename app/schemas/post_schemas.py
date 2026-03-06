@@ -2,7 +2,13 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-from app.models.post import Tag
+from app.models.post import Image, Tag
+
+
+class ReadImage(BaseModel):
+    filename: str
+    title: str
+    alt: str
 
 
 class Link(BaseModel):
@@ -36,7 +42,7 @@ class UpdatePost(BaseModel):
 class ReadPost(BaseModel):
     title: str
     body: BodyContent
-    images: list[str] | None = []
+    images: list[Image] | None = []
     slug: str
     tags: list[Tag] = []
     created_date: datetime

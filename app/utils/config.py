@@ -15,6 +15,7 @@ class Settings(BaseSettings):
         "development", description="Flask environment (development, production, etc.)"
     )
     FLASK_SECRET_KEY: str
+    UPLOAD_DIR: str = "uploads"
 
     @property
     def database_url(self) -> str:
