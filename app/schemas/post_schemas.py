@@ -1,14 +1,16 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
-from app.models.post import Image, Tag
+from app.models.post import Tag
 
 
 class ReadImage(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     filename: str
-    title: str
-    alt: str
+    caption: str | None = None
+    alt: str | None = None
 
 
 class Link(BaseModel):
@@ -27,35 +29,33 @@ class BodyContent(BaseModel):
 class CreatePost(BaseModel):
     title: str
     body: str
-    images: list[str] | None = []
-    tags: list[str] | None = []
+    images: list[str] = []
+    tags: list[str] = []
 
 
 class UpdatePost(BaseModel):
     title: str
     body: str
-    images: list[str] | None = []
-    tags: list[str] | None = None
+    images: list[str] = []
+    tags: list[str] = []
 
 
 class ReadPost(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     title: str
     body: BodyContent
-    images: list[Image] | None = []
+    images: list[ReadImage] = []
     slug: str
     tags: list[Tag] = []
     created_date: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class ListPost(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     title: str
     slug: str
     teaser: str
-    images: list[str] | None = []
+    images: list[str] = []
     created_date: datetime
-
-    class Config:
-        from_attributes = True
