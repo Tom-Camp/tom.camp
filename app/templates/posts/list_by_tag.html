@@ -6,25 +6,7 @@
 <h1 class="text-4xl font-bold tracking-tight mb-4">Posts by {{ tag|title }}</h1>
 <ul class="space-y-10">
 {% for post in posts %}
-    <li>
-        <h5 class="font-bold text-lg text-foreground">
-            {{ post.title }}
-        </h5>
-        <p class="mb-2 text-base text-muted-foreground-1">
-            {{ post.created_date.strftime('%B %d, %Y') }}
-        </p>
-        <p class="mt-1 text-base text-muted-foreground-1">
-            {{ post.body[:150] }}...
-        </p>
-        <p class="mt-1">
-            <a
-                class="text-base text-muted-foreground-1 underline hover:text-primary-hover hover:decoration-2 focus:outline-hidden focus:decoration-2"
-                href="{{ url_for('posts.read_post', slug=post.slug) }}"
-            >
-                Continue reading
-            </a>
-        </p>
-    </li>
+    {% include 'components/post_list_item.html' with context %}
 {% endfor %}
 </ul>
 {% endblock %}

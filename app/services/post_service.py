@@ -104,6 +104,7 @@ class PostService:
         statement = (
             select(Post)
             .options(selectinload(Post.images))
+            .options(selectinload(Post.tags))
             .offset(skip)
             .limit(limit)
             .order_by(self._order_by(order))

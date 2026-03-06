@@ -21,7 +21,7 @@
                 </div>
                 <div class="p-4 md:p-5">
                     <p class="mt-2 text-xs uppercase text-muted-foreground-2">
-                        Thingamajig
+                        {{ post.tags[0].name if post.tags else 'Post' }}
                     </p>
                     <h3 class="mt-2 text-lg font-medium text-foreground group-hover:text-primary-hover">
                         {{ post.title }}
