@@ -2,6 +2,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import Sequence
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.models.post import Post, Tag
@@ -49,11 +50,16 @@ class PostService:
         return new_post
 
     def get_post(self, slug: str) -> Post | None:
-        statement = select(Post).where(Post.slug == slug)
+        statement = (
+            select(Post).where(Post.slug == slug).options(selectinload(Post.images))
+        )
         return self._db.exec(statement).first()
 
     def update_post(self, post_id: UUID, data: UpdatePost) -> Post | None:
-        post: Post | None = self._db.get(Post, post_id)
+        statement = (
+            select(Post).where(Post.id == post_id).options(selectinload(Post.images))
+        )
+        post: Post | None = self._db.exec(statement).first()
         if not post:
             logger.warning("update_post: post {} not found", post_id)
             return None
@@ -86,6 +92,7 @@ class PostService:
     ) -> Sequence[Post]:
         statement = (
             select(Post)
+            .options(selectinload(Post.images))
             .offset(skip)
             .limit(limit)
             .order_by(
@@ -104,6 +111,7 @@ class PostService:
             select(Post)
             .join(Post.tags)
             .where(Tag.name == tag.strip().lower())
+            .options(selectinload(Post.images))
             .offset(skip)
             .limit(limit)
             .order_by(

@@ -7,31 +7,13 @@ from slugify import slugify
 from sqlmodel import Session
 
 from app.models.post import Post
-from app.schemas.post_schemas import BodyContent, CreatePost, Link, ReadPost
+from app.schemas.post_schemas import CreatePost, ListPost
 from app.services.post_service import PostService
 from app.utils.auth import require_admin
 from app.utils.database import engine
+from app.utils.helpers import structure_post_response, truncate_at_boundary
 
 posts_bp = Blueprint("posts", __name__, url_prefix="/posts")
-
-
-def _structure_post_reponse(post: Post) -> ReadPost:
-    post_body = json.loads(post.body) if post and post.body else {}
-    links = [
-        Link(url=link.get("url"), text=link.get("text"))
-        for link in post_body.get("links", [])
-    ]
-    content = [paragraph for paragraph in post_body.get("paragraphs", [])]
-    return ReadPost(
-        title=post.title,
-        body=BodyContent(
-            paragraphs=content, links=links, repo=post_body.get("repo", None)
-        ),
-        images=post.images,
-        slug=post.slug,
-        tags=post.tags,
-        created_date=post.created_date,
-    )
 
 
 @posts_bp.post("/")
@@ -71,7 +53,7 @@ def read_post(slug: str) -> str:
             logger.warning("get_post: post {} not found", slug)
             abort(404, description="Post not found")
 
-        full_post = _structure_post_reponse(post=post)  # type: ignore
+        full_post = structure_post_response(post=post)  # type: ignore
         return render_template("posts/index.html", post=full_post)
 
 
@@ -80,7 +62,18 @@ def list_posts() -> str:
     with Session(engine) as session:
         service = PostService(session)
         posts = service.list_posts()
-        return render_template("posts/list.html", posts=posts)
+        formatted_posts = [
+            ListPost(
+                title=post.title,
+                slug=post.slug,
+                teaser=truncate_at_boundary(
+                    json.loads(post.body).get("paragraphs", [""])[0], 150
+                ),
+                created_date=post.created_date,
+            )
+            for post in posts
+        ]
+        return render_template("posts/list.html", posts=formatted_posts)
 
 
 @posts_bp.get("/tag/<string:tag>")

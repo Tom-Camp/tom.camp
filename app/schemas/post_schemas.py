@@ -1,5 +1,4 @@
 from datetime import datetime
-from uuid import UUID
 
 from pydantic import BaseModel
 
@@ -47,9 +46,10 @@ class ReadPost(BaseModel):
 
 
 class ListPost(BaseModel):
-    id: UUID
     title: str
     slug: str
+    teaser: str
+    images: list[str] | None = []
     created_date: datetime
 
     class Config:

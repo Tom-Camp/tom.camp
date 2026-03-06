@@ -1,21 +1,50 @@
-<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="max-w-[85rem] px-4 py-10 sm:px-6 lg:px-8 lg:py-2 mx-auto">
+    <!-- Title -->
+    <div class="max-w-2xl text-center mx-auto mb-10 lg:mb-14">
+        <h2 class="text-xl font-bold md:text-3xl md:leading-tight text-foreground">See my lastest projects</h2>
+        <p class="mt-1 text-muted-foreground-2">The latest, possibly the greatest, thingamajigs</p>
+    </div>
+    <!-- End Title -->
+
+    <!-- Grid -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 lg:mb-14">
+        {% for post in posts %}
+            <!-- Card -->
+            <a class="bg-white shadow-md group flex flex-col bg-layer border border-layer-line shadow-2xs rounded-xl hover:shadow-md focus:outline-hidden focus:shadow-md transition" href="#">
+                <div class="aspect-w-16 aspect-h-9">
+                    {% if post.images %}
+                    <img class="w-full object-cover rounded-t-xl" src="{{ url_for('static', post.image_url) }}" alt="Blog Image">
+                    {% endif %}
+                </div>
+                <div class="p-4 md:p-5">
+                    <p class="mt-2 text-xs uppercase text-muted-foreground-2">
+                        Thingamajig
+                    </p>
+                    <h3 class="mt-2 text-lg font-medium text-foreground group-hover:text-primary-hover">
+                        {{ post.title }}
+                    </h3>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+    <!-- End Grid -->
+
     <!-- Card -->
-    <a
-        class="group flex flex-col h-full bg-layer border border-layer-line hover:border-transparent hover:shadow-lg focus:outline-hidden focus:border-transparent focus:shadow-lg transition duration-300 rounded-xl p-5"
-        href="{{ url_for('posts.read_post', slug=post.slug) }}">
-        {% if post.image_url %}
-            <div class="aspect-w-16 aspect-h-11">
-                <img class="w-full object-cover rounded-xl" src="{{ url_for('static', filename=post.image_url) }}" alt="Post Image">
+    <div class="text-center">
+        <button class="inline-block bg-layer border border-gray-200 shadow-2xs rounded-full">
+            <div class="py-3 px-4 flex items-center gap-x-2">
+                <p class="text-muted-foreground-2">
+                    Want to see more?
+                </p>
+                <a
+                    class="inline-flex items-center gap-x-1.5 text-primary decoration-2 hover:underline focus:outline-hidden focus:underline font-medium"
+                    href="{{ url_for('posts.list_posts') }}"
+                >
+                    Go here >
+                </a>
             </div>
-        {% endif %}
-        <div class="my-6">
-            <h3 class="text-xl font-semibold text-foreground">
-                {{ post.title }}
-            </h3>
-            <p class="mt-5 text-muted-foreground-2">
-                {{ post.body[:150] }}...
-            </p>
-        </div>
-    </a>
+        </button>
+    </div>
     <!-- End Card -->
 </div>
+<!-- End Card Blog -->

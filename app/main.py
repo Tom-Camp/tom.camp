@@ -1,4 +1,3 @@
-import mistune
 from flask import Flask, render_template
 from loguru import logger
 from sqlmodel import Session
@@ -15,9 +14,6 @@ def create_app() -> Flask:
     app = Flask(__name__)
     logger.info("Starting {} (env={})", settings.APP_NAME, settings.FLASK_ENV)
 
-    # Keep markdown output untrusted; templates should opt-in to |safe only when appropriate.
-    markdown_renderer = mistune.create_markdown(escape=True)
-    app.jinja_env.filters["markdown"] = lambda text: markdown_renderer(text or "")
     app.register_blueprint(posts_bp)
 
     with app.app_context():
@@ -27,7 +23,7 @@ def create_app() -> Flask:
     def index():
         with Session(engine) as session:
             service = PostService(session)
-            posts = service.list_posts()
+            posts = service.list_posts(limit=4)
         return render_template("index.html", posts=posts)
 
     return app

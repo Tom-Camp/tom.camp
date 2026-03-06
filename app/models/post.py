@@ -29,6 +29,14 @@ class Tag(ModelBase, table=True):  # type: ignore
     posts: list["Post"] = Relationship(back_populates="tags", link_model=PostTagLink)
 
 
+class Image(ModelBase, table=True):  # type: ignore
+    filename: str = Field(..., unique=True)
+    title: str
+    alt: str
+    post_id: UUID = Field(foreign_key="post.id", nullable=False)
+    post: "Post" = Relationship(back_populates="images")
+
+
 class Post(ModelBase, table=True):  # type: ignore
     title: str = Field(..., unique=True)
     body: str = Field(
@@ -36,8 +44,6 @@ class Post(ModelBase, table=True):  # type: ignore
         sa_type=JSONType,
         nullable=False,
     )
-    images: list[str] | None = Field(
-        default_factory=list, sa_type=JSON, description="List of image filenames"
-    )
+    images: list[Image] | None = Relationship(back_populates="post")
     slug: str | None = None
     tags: list[Tag] = Relationship(back_populates="posts", link_model=PostTagLink)
