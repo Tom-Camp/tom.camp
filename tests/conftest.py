@@ -9,12 +9,10 @@ os.environ.setdefault("DB_NAME", "test")
 os.environ.setdefault("FLASK_SECRET_KEY", "test-flask-secret")
 
 import pytest  # noqa: E402
+from sqlalchemy import JSON  # noqa: E402
 from sqlmodel import Session, SQLModel, create_engine  # noqa: E402
 from sqlmodel.pool import StaticPool  # noqa: E402
 
-import app.main as main_module  # noqa: E402
-import app.routes.post_routes as routes_module  # noqa: E402
-import app.utils.database as db_module  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.models.post import Post  # noqa: E402
 
@@ -29,23 +27,15 @@ def test_engine():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    # Patch the module-level engine references before creating tables or the app.
-    db_module.engine = engine
-    routes_module.engine = engine
-    main_module.engine = engine
-
     # JSONB is PostgreSQL-only; swap to JSON so SQLite can create the table.
-    from sqlalchemy import JSON
-
     Post.__table__.c.body.type = JSON()
-
     SQLModel.metadata.create_all(engine)
     return engine
 
 
 @pytest.fixture(scope="session")
 def app(test_engine):
-    flask_app = create_app()
+    flask_app = create_app(engine=test_engine)
     flask_app.config["TESTING"] = True
     return flask_app
 

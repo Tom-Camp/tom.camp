@@ -59,6 +59,7 @@ class Post(ModelBase, table=True):  # type: ignore
         sa_column=Column(JSONB, nullable=False, default=dict),
     )
     images: list[Image] = Relationship(back_populates="post")
+    is_published: bool = Field(default=False)
     slug: str | None = Field(default=None, unique=True)
     tags: list[Tag] = Relationship(back_populates="posts", link_model=PostTagLink)
 

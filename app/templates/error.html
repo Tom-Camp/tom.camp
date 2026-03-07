@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Tom.Camp | {{ code }}{% endblock %}
+
+{% block content %}
+<div class="text-center py-20">
+    <h1 class="text-6xl font-bold text-foreground mb-4">{{ code }}</h1>
+    <p class="text-xl text-muted-foreground-1 mb-8">{{ message }}</p>
+    <a
+        class="inline-flex items-center gap-x-1.5 text-sm decoration-2 hover:underline focus:outline-hidden focus:underline"
+        href="{{ url_for('index') }}"
+    >
+        &lsaquo; Back to home
+    </a>
+</div>
+{% endblock %}

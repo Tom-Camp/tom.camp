@@ -58,12 +58,14 @@ class PostService:
         self._db.refresh(new_post)
         return new_post
 
-    def get_post(self, slug: str) -> Post | None:
+    def get_post(self, slug: str, only_published: bool = False) -> Post | None:
         statement = (
             select(Post)
             .where(Post.slug == slug)
             .options(selectinload(Post.images), selectinload(Post.tags))
         )
+        if only_published:
+            statement = statement.where(Post.is_published == True)  # noqa: E712
         return self._db.exec(statement).first()
 
     def update_post(self, post_id: UUID, data: UpdatePost) -> Post | None:
@@ -99,7 +101,11 @@ class PostService:
         return True
 
     def list_posts(
-        self, skip: int = 0, limit: int = 10, order: Literal["asc", "desc"] = "desc"
+        self,
+        skip: int = 0,
+        limit: int = 10,
+        order: Literal["asc", "desc"] = "desc",
+        only_published: bool = True,
     ) -> Sequence[Post]:
         statement = (
             select(Post)
@@ -109,6 +115,8 @@ class PostService:
             .limit(limit)
             .order_by(self._order_by(order))
         )
+        if only_published:
+            statement = statement.where(Post.is_published == True)  # noqa: E712
         return self._db.exec(statement).all()
 
     def list_posts_by_tag(
@@ -117,16 +125,20 @@ class PostService:
         skip: int = 0,
         limit: int = 10,
         order: Literal["asc", "desc"] = "desc",
+        only_published: bool = True,
     ) -> Sequence[Post]:
         statement = (
             select(Post)
             .join(Post.tags)
             .where(Tag.name == tag.strip().lower())
             .options(selectinload(Post.images))
+            .options(selectinload(Post.tags))
             .offset(skip)
             .limit(limit)
             .order_by(self._order_by(order))
         )
+        if only_published:
+            statement = statement.where(Post.is_published == True)  # noqa: E712
         return self._db.exec(statement).all()
 
     def add_image_to_post(
