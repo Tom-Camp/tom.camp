@@ -1,5 +1,4 @@
 import io
-import json
 
 from sqlmodel import Session
 
@@ -20,7 +19,7 @@ def seed_post(
     """Create a post directly in the DB for route test setup."""
     body = {"paragraphs": paragraphs or ["A paragraph about things."], "links": []}
     post_data = CreatePost(
-        title=title, body=json.dumps(body), tags=tags or [], is_published=is_published
+        title=title, body=body, tags=tags or [], is_published=is_published
     )
     with Session(test_engine) as session:
         return PostService(session).create_post(post_data)

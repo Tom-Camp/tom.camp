@@ -28,7 +28,7 @@ class BodyContent(BaseModel):
 
 class CreatePost(BaseModel):
     title: str
-    body: str
+    body: BodyContent
     images: list[str] = []
     is_published: bool = False
     tags: list[str] = []
@@ -36,7 +36,7 @@ class CreatePost(BaseModel):
 
 class UpdatePost(BaseModel):
     title: str | None = None
-    body: str | None = None
+    body: BodyContent | None = None
     images: list[str] = []
     is_published: bool | None = None
     tags: list[str] = []

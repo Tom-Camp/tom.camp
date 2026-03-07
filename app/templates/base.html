@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <title>{% block title %}Tom.Camp{% endblock %}</title>
+    {% if config.DEBUG %}
     <script src="https://cdn.tailwindcss.com"></script>
+    {% else %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+    {% endif %}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head %}{% endblock %}
 </head>

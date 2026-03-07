@@ -17,6 +17,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "pytailwindcss>=0.3.0",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
 ]

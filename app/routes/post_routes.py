@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from typing import Any
 
@@ -37,7 +36,7 @@ def create_post() -> tuple[dict, int]:
 
     post_data = CreatePost(
         title=data.get("title"),
-        body=json.dumps(data.get("body", {})),
+        body=data.get("body", {}),
         tags=data.get("tags", []),
         is_published=data.get("is_published", False),
     )
@@ -59,12 +58,8 @@ PAGE_SIZE = 10
 def _format_posts(posts: list) -> list[ListPost]:
     formatted = []
     for post in posts:
-        try:
-            first_paragraph = json.loads(post.body).get("paragraphs", [""])[0]
-        except json.JSONDecodeError:
-            first_paragraph = ""
-        except IndexError:
-            first_paragraph = ""
+        paragraphs = (post.body or {}).get("paragraphs", [])
+        first_paragraph = paragraphs[0] if paragraphs else ""
         formatted.append(
             ListPost(
                 title=post.title,
@@ -151,7 +146,7 @@ def update_post(slug: str) -> tuple[dict, int]:
         if "title" in data:
             post_fields["title"] = data["title"]
         if "body" in data:
-            post_fields["body"] = json.dumps(data["body"])
+            post_fields["body"] = data["body"]
         if "tags" in data:
             post_fields["tags"] = data["tags"]
         if "is_published" in data:

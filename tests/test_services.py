@@ -1,4 +1,3 @@
-import json
 import uuid
 
 import pytest
@@ -17,7 +16,7 @@ def make_post_data(
 ) -> CreatePost:
     body = {"paragraphs": paragraphs or ["Hello world."], "links": []}
     return CreatePost(
-        title=title, body=json.dumps(body), tags=tags or [], is_published=is_published
+        title=title, body=body, tags=tags or [], is_published=is_published
     )
 
 
@@ -69,9 +68,7 @@ class TestCreatePost:
         post = service.create_post(
             make_post_data(paragraphs=["Para one.", "Para two."])
         )
-        # body may be a string or dict depending on backend; both are valid
-        body = json.loads(post.body) if isinstance(post.body, str) else post.body
-        assert body["paragraphs"] == ["Para one.", "Para two."]
+        assert post.body["paragraphs"] == ["Para one.", "Para two."]
 
     def test_creates_tags(self, service):
         post = service.create_post(make_post_data(tags=["python", "flask"]))
@@ -105,24 +102,24 @@ class TestGetPost:
 
 class TestUpdatePost:
     def test_updates_title(self, service, existing_post):
-        data = UpdatePost(title="Updated Title", body=json.dumps({"paragraphs": []}))
+        data = UpdatePost(title="Updated Title", body={"paragraphs": []})
         updated = service.update_post(existing_post.id, data)
         assert updated is not None
         assert updated.title == "Updated Title"
 
     def test_updates_tags(self, service, existing_post):
-        data = UpdatePost(title="Test Post", body=json.dumps({}), tags=["newtag"])
+        data = UpdatePost(title="Test Post", body={}, tags=["newtag"])
         updated = service.update_post(existing_post.id, data)
         assert {t.name for t in updated.tags} == {"newtag"}
 
     def test_replaces_tags(self, service):
         post = service.create_post(make_post_data(tags=["old"]))
-        data = UpdatePost(title="Test Post", body=json.dumps({}), tags=["new"])
+        data = UpdatePost(title="Test Post", body={}, tags=["new"])
         updated = service.update_post(post.id, data)
         assert {t.name for t in updated.tags} == {"new"}
 
     def test_returns_none_for_unknown_id(self, service):
-        data = UpdatePost(title="x", body=json.dumps({}))
+        data = UpdatePost(title="x", body={})
         assert service.update_post(uuid.uuid4(), data) is None
 
 

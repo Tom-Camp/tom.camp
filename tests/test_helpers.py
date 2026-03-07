@@ -1,5 +1,3 @@
-import json
-
 from app.utils.helpers import structure_post_response, truncate_at_boundary
 
 
@@ -59,7 +57,7 @@ class TestStructurePostResponse:
             "links": [],
             "repo": "https://github.com/example",
         }
-        post_data = CreatePost(title="Helper Test", body=json.dumps(body))
+        post_data = CreatePost(title="Helper Test", body=body)
         post = service.create_post(post_data)
 
         result = structure_post_response(post)
@@ -73,7 +71,7 @@ class TestStructurePostResponse:
         from app.services.post_service import PostService
 
         service = PostService(db_session)
-        post = service.create_post(CreatePost(title="Empty Body", body=json.dumps({})))
+        post = service.create_post(CreatePost(title="Empty Body", body={}))
 
         result = structure_post_response(post)
 
@@ -90,9 +88,7 @@ class TestStructurePostResponse:
             "paragraphs": [],
             "links": [{"url": "https://example.com", "text": "Example"}],
         }
-        post = service.create_post(
-            CreatePost(title="Links Post", body=json.dumps(body))
-        )
+        post = service.create_post(CreatePost(title="Links Post", body=body))
 
         result = structure_post_response(post)
 
@@ -106,7 +102,7 @@ class TestStructurePostResponse:
 
         service = PostService(db_session)
         post = service.create_post(
-            CreatePost(title="Image Post", body=json.dumps({"paragraphs": []}))
+            CreatePost(title="Image Post", body={"paragraphs": []})
         )
         service.add_image_to_post(post, "photo.jpg", "Caption", "Alt text")
 
