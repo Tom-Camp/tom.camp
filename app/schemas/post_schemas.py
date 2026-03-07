@@ -28,15 +28,17 @@ class BodyContent(BaseModel):
 
 class CreatePost(BaseModel):
     title: str
-    body: str
+    body: BodyContent
     images: list[str] = []
+    is_published: bool = False
     tags: list[str] = []
 
 
 class UpdatePost(BaseModel):
-    title: str
-    body: str
+    title: str | None = None
+    body: BodyContent | None = None
     images: list[str] = []
+    is_published: bool | None = None
     tags: list[str] = []
 
 
@@ -46,6 +48,7 @@ class ReadPost(BaseModel):
     title: str
     body: BodyContent
     images: list[ReadImage] = []
+    is_published: bool
     slug: str
     tags: list[Tag] = []
     created_date: datetime

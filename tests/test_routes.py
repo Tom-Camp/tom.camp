@@ -1,5 +1,4 @@
 import io
-import json
 
 from sqlmodel import Session
 
@@ -15,10 +14,13 @@ def seed_post(
     title: str = "Test Post",
     paragraphs: list[str] | None = None,
     tags: list[str] | None = None,
+    is_published: bool = True,
 ) -> Post:
     """Create a post directly in the DB for route test setup."""
     body = {"paragraphs": paragraphs or ["A paragraph about things."], "links": []}
-    post_data = CreatePost(title=title, body=json.dumps(body), tags=tags or [])
+    post_data = CreatePost(
+        title=title, body=body, tags=tags or [], is_published=is_published
+    )
     with Session(test_engine) as session:
         return PostService(session).create_post(post_data)
 
@@ -325,3 +327,233 @@ class TestUploadImageRoute:
         )
         stored = list(tmp_path.glob("*.jpg"))
         assert len(stored) == 1
+
+
+# ---------------------------------------------------------------------------
+# PUT /posts/<slug>
+# ---------------------------------------------------------------------------
+class TestUpdatePostRoute:
+    def test_requires_auth_header(self, client, test_engine):
+        post = seed_post(test_engine, "Update Auth Post")
+        response = client.put(f"/posts/{post.slug}", json={"title": "T", "body": {}})
+        assert response.status_code == 401
+
+    def test_wrong_key_returns_401(self, client, test_engine):
+        post = seed_post(test_engine, "Update Auth Post")
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"title": "T", "body": {}},
+            headers={"X-Admin-Secret": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    def test_returns_404_for_unknown_slug(self, client):
+        response = client.put(
+            "/posts/no-such-post",
+            json={"title": "T", "body": {"paragraphs": []}},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 404
+
+    def test_body_only_update_returns_200(self, client, test_engine):
+        post = seed_post(test_engine, "Body Only Post")
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"body": {"paragraphs": ["updated"]}},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 200
+
+    def test_title_only_update_returns_200(self, client, test_engine):
+        post = seed_post(test_engine, "Title Only Post")
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"title": "Title Only Post"},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 200
+
+    def test_updates_post_successfully(self, client, test_engine):
+        post = seed_post(test_engine, "Original Title")
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"title": "Original Title", "body": {"paragraphs": ["Updated body."]}},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["title"] == "Original Title"
+
+    def test_updates_tags(self, client, test_engine):
+        post = seed_post(test_engine, "Tag Update Post", tags=["old"])
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={
+                "title": "Tag Update Post",
+                "body": {"paragraphs": []},
+                "tags": ["new"],
+            },
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# DELETE /posts/<slug>
+# ---------------------------------------------------------------------------
+class TestDeletePostRoute:
+    def test_requires_auth_header(self, client, test_engine):
+        post = seed_post(test_engine, "Delete Auth Post")
+        response = client.delete(f"/posts/{post.slug}")
+        assert response.status_code == 401
+
+    def test_wrong_key_returns_401(self, client, test_engine):
+        post = seed_post(test_engine, "Delete Auth Post")
+        response = client.delete(
+            f"/posts/{post.slug}",
+            headers={"X-Admin-Secret": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    def test_returns_404_for_unknown_slug(self, client):
+        response = client.delete("/posts/no-such-post", headers=ADMIN_HEADER)
+        assert response.status_code == 404
+
+    def test_deletes_post_successfully(self, client, test_engine):
+        post = seed_post(test_engine, "Post To Delete")
+        response = client.delete(f"/posts/{post.slug}", headers=ADMIN_HEADER)
+        assert response.status_code == 204
+
+    def test_post_no_longer_accessible_after_delete(self, client, test_engine):
+        post = seed_post(test_engine, "Gone Post")
+        client.delete(f"/posts/{post.slug}", headers=ADMIN_HEADER)
+        response = client.get(f"/posts/{post.slug}")
+        assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Pagination
+# ---------------------------------------------------------------------------
+class TestPagination:
+    def test_list_posts_page_one(self, client, test_engine):
+        for i in range(12):
+            seed_post(test_engine, f"Paged Post {i}")
+        response = client.get("/posts/?page=1")
+        assert response.status_code == 200
+
+    def test_list_posts_page_two_shows_next_batch(self, client, test_engine):
+        for i in range(12):
+            seed_post(test_engine, f"Batch Post {i}")
+        r1 = client.get("/posts/?page=1")
+        r2 = client.get("/posts/?page=2")
+        assert r1.status_code == 200
+        assert r2.status_code == 200
+        # Page 2 should have different content
+        assert r1.data != r2.data
+
+    def test_list_posts_next_link_present_when_more(self, client, test_engine):
+        for i in range(11):
+            seed_post(test_engine, f"Next Link Post {i}")
+        response = client.get("/posts/?page=1")
+        assert b"page=2" in response.data
+
+    def test_list_posts_no_next_link_on_last_page(self, client, test_engine):
+        for i in range(3):
+            seed_post(test_engine, f"Short List Post {i}")
+        response = client.get("/posts/?page=1")
+        assert b"page=2" not in response.data
+
+    def test_list_by_tag_pagination(self, client, test_engine):
+        for i in range(12):
+            seed_post(test_engine, f"Tagged Paged {i}", tags=["python"])
+        response = client.get("/posts/tag/python?page=1")
+        assert b"page=2" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Published / draft state
+# ---------------------------------------------------------------------------
+class TestPublishedState:
+    def test_draft_not_shown_in_list(self, client, test_engine):
+        seed_post(test_engine, "Draft Post", is_published=False)
+        response = client.get("/posts/")
+        assert b"Draft Post" not in response.data
+
+    def test_published_shown_in_list(self, client, test_engine):
+        seed_post(test_engine, "Live Post", is_published=True)
+        response = client.get("/posts/")
+        assert b"Live Post" in response.data
+
+    def test_draft_returns_404_on_read(self, client, test_engine):
+        post = seed_post(test_engine, "Hidden Post", is_published=False)
+        response = client.get(f"/posts/{post.slug}")
+        assert response.status_code == 404
+
+    def test_draft_not_shown_in_tag_list(self, client, test_engine):
+        seed_post(test_engine, "Draft Tagged", tags=["python"], is_published=False)
+        response = client.get("/posts/tag/python")
+        assert b"Draft Tagged" not in response.data
+
+    def test_create_post_defaults_to_draft(self, client):
+        response = client.post(
+            "/posts/",
+            json={"title": "Unpublished Post", "body": {"paragraphs": []}},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 201
+        assert response.get_json()["is_published"] is False
+
+    def test_create_post_can_be_published(self, client):
+        response = client.post(
+            "/posts/",
+            json={
+                "title": "Published Post",
+                "body": {"paragraphs": []},
+                "is_published": True,
+            },
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 201
+        assert response.get_json()["is_published"] is True
+
+    def test_update_publishes_draft(self, client, test_engine):
+        post = seed_post(test_engine, "To Publish", is_published=False)
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"is_published": True},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 200
+        assert response.get_json()["is_published"] is True
+
+
+# ---------------------------------------------------------------------------
+# Error handlers
+# ---------------------------------------------------------------------------
+class TestErrorHandlers:
+    def test_404_returns_html_for_browser(self, client):
+        response = client.get("/posts/no-such-slug")
+        assert response.status_code == 404
+        assert b"404" in response.data
+
+    def test_404_returns_json_for_api_client(self, client):
+        response = client.get(
+            "/posts/no-such-slug", headers={"Accept": "application/json"}
+        )
+        assert response.status_code == 404
+        data = response.get_json()
+        assert "error" in data
+
+    def test_401_returns_json_for_api_client(self, client):
+        response = client.post(
+            "/posts/",
+            json={"title": "T", "body": {}},
+            headers={"Accept": "application/json"},
+        )
+        assert response.status_code == 401
+        assert "error" in response.get_json()
+
+    def test_partial_update_empty_body_returns_400(self, client, test_engine):
+        post = seed_post(test_engine, "Partial Post")
+        response = client.put(f"/posts/{post.slug}", json={}, headers=ADMIN_HEADER)
+        assert response.status_code == 400

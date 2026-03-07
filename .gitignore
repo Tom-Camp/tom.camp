@@ -10,3 +10,4 @@ wheels/
 .venv
 CLAUDE.md
 .coverage
+app/static/css/tailwind.css
