@@ -9,4 +9,24 @@
     {% include 'components/post_list_item.html' with context %}
 {% endfor %}
 </ul>
+
+{% if has_prev or has_next %}
+<div class="flex justify-between items-center mt-12">
+    {% if has_prev %}
+    <a href="{{ url_for('posts.list_posts_by_tag', tag=tag, page=page - 1) }}"
+       class="py-2 px-4 inline-flex items-center gap-x-1.5 text-sm font-medium rounded-full border border-line-2 hover:bg-layer-hover focus:outline-hidden focus:bg-layer-focus">
+        &lsaquo; Previous
+    </a>
+    {% else %}
+    <span></span>
+    {% endif %}
+
+    {% if has_next %}
+    <a href="{{ url_for('posts.list_posts_by_tag', tag=tag, page=page + 1) }}"
+       class="py-2 px-4 inline-flex items-center gap-x-1.5 text-sm font-medium rounded-full border border-line-2 hover:bg-layer-hover focus:outline-hidden focus:bg-layer-focus">
+        Next &rsaquo;
+    </a>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

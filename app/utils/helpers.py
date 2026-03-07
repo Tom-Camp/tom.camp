@@ -36,6 +36,7 @@ def structure_post_response(post: Post) -> ReadPost:
         title=post.title,
         body=BodyContent(paragraphs=content, links=links, repo=body.get("repo", None)),
         images=images,
+        is_published=post.is_published,
         slug=post.slug,
         tags=post.tags,
         created_date=post.created_date,

@@ -39,6 +39,7 @@ def create_post() -> tuple[dict, int]:
         title=data.get("title"),
         body=json.dumps(data.get("body", {})),
         tags=data.get("tags", []),
+        is_published=data.get("is_published", False),
     )
 
     with Session(engine) as session:
@@ -52,27 +53,45 @@ def create_post() -> tuple[dict, int]:
         return post.model_dump(mode="json"), 201
 
 
+PAGE_SIZE = 10
+
+
+def _format_posts(posts: list) -> list[ListPost]:
+    formatted = []
+    for post in posts:
+        try:
+            first_paragraph = json.loads(post.body).get("paragraphs", [""])[0]
+        except json.JSONDecodeError:
+            first_paragraph = ""
+        except IndexError:
+            first_paragraph = ""
+        formatted.append(
+            ListPost(
+                title=post.title,
+                slug=post.slug,
+                teaser=truncate_at_boundary(first_paragraph, 150),
+                created_date=post.created_date,
+            )
+        )
+    return formatted
+
+
 @posts_bp.get("/")
 def list_posts() -> str:
+    page = max(1, request.args.get("page", 1, type=int))
+    skip = (page - 1) * PAGE_SIZE
     with Session(engine) as session:
         service = PostService(session)
-        posts = service.list_posts()
-        formatted_posts = []
-        for post in posts:
-            try:
-                first_paragraph = json.loads(post.body).get("paragraphs", [""])[0]
-            except json.JSONDecodeError:
-                logger.warning("list_posts: invalid body JSON for post {!r}", post.slug)
-                first_paragraph = ""
-            formatted_posts.append(
-                ListPost(
-                    title=post.title,
-                    slug=post.slug,
-                    teaser=truncate_at_boundary(first_paragraph, 150),
-                    created_date=post.created_date,
-                )
-            )
-        return render_template("posts/list.html", posts=formatted_posts)
+        batch = service.list_posts(skip=skip, limit=PAGE_SIZE + 1)
+        has_next = len(batch) > PAGE_SIZE
+        formatted_posts = _format_posts(list(batch[:PAGE_SIZE]))
+    return render_template(
+        "posts/list.html",
+        posts=formatted_posts,
+        page=page,
+        has_prev=page > 1,
+        has_next=has_next,
+    )
 
 
 @posts_bp.get("/images/<path:filename>")
@@ -82,27 +101,21 @@ def serve_image(filename: str) -> Any:
 
 @posts_bp.get("/tag/<string:tag>")
 def list_posts_by_tag(tag: str) -> str:
+    page = max(1, request.args.get("page", 1, type=int))
+    skip = (page - 1) * PAGE_SIZE
     with Session(engine) as session:
         service = PostService(session)
-        posts = service.list_posts_by_tag(tag)
-        formatted_posts = []
-        for post in posts:
-            try:
-                first_paragraph = json.loads(post.body).get("paragraphs", [""])[0]
-            except json.JSONDecodeError:
-                logger.warning(
-                    "list_posts_by_tag: invalid body JSON for post {!r}", post.slug
-                )
-                first_paragraph = ""
-            formatted_posts.append(
-                ListPost(
-                    title=post.title,
-                    slug=post.slug,
-                    teaser=truncate_at_boundary(first_paragraph, 150),
-                    created_date=post.created_date,
-                )
-            )
-        return render_template("posts/list_by_tag.html", posts=formatted_posts, tag=tag)
+        batch = service.list_posts_by_tag(tag, skip=skip, limit=PAGE_SIZE + 1)
+        has_next = len(batch) > PAGE_SIZE
+        formatted_posts = _format_posts(list(batch[:PAGE_SIZE]))
+    return render_template(
+        "posts/list_by_tag.html",
+        posts=formatted_posts,
+        tag=tag,
+        page=page,
+        has_prev=page > 1,
+        has_next=has_next,
+    )
 
 
 @posts_bp.get("/<string:slug>")
@@ -110,7 +123,7 @@ def read_post(slug: str) -> str:
     with Session(engine) as session:
         service = PostService(session)
 
-        post: Post | None = service.get_post(slug)
+        post: Post | None = service.get_post(slug, only_published=True)
         if post is None:
             logger.warning("get_post: post {} not found", slug)
             abort(404, description="Post not found")
@@ -124,8 +137,8 @@ def read_post(slug: str) -> str:
 @require_admin
 def update_post(slug: str) -> tuple[dict, int]:
     data: dict[str, Any] = request.get_json(silent=True) or {}
-    if not data.get("title") or not data.get("body"):
-        abort(400, description="title and body are required")
+    if not data:
+        abort(400, description="No update data provided")
 
     with Session(engine) as session:
         service = PostService(session)
@@ -134,11 +147,17 @@ def update_post(slug: str) -> tuple[dict, int]:
             abort(404, description="Post not found")
         assert post is not None
 
-        post_data = UpdatePost(
-            title=data.get("title"),
-            body=json.dumps(data.get("body", {})),
-            tags=data.get("tags", []),
-        )
+        post_fields: dict[str, Any] = {}
+        if "title" in data:
+            post_fields["title"] = data["title"]
+        if "body" in data:
+            post_fields["body"] = json.dumps(data["body"])
+        if "tags" in data:
+            post_fields["tags"] = data["tags"]
+        if "is_published" in data:
+            post_fields["is_published"] = data["is_published"]
+
+        post_data = UpdatePost(**post_fields)
         updated = service.update_post(post.id, post_data)
         assert updated is not None
 

@@ -1,6 +1,7 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 from loguru import logger
 from sqlmodel import Session
+from werkzeug.exceptions import HTTPException
 
 from app.routes.post_routes import posts_bp
 from app.services.post_service import PostService
@@ -24,8 +25,17 @@ def create_app() -> Flask:
     def index():
         with Session(engine) as session:
             service = PostService(session)
-            posts = service.list_posts(limit=4)
+            posts = service.list_posts(limit=4, only_published=True)
         return render_template("index.html", posts=posts)
+
+    @app.errorhandler(HTTPException)
+    def handle_http_error(e: HTTPException):
+        if (
+            request.accept_mimetypes.best_match(["application/json", "text/html"])
+            == "application/json"
+        ):
+            return {"error": e.description}, e.code
+        return render_template("error.html", code=e.code, message=e.description), e.code
 
     return app
 

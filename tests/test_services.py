@@ -13,9 +13,12 @@ def make_post_data(
     title: str = "Test Post",
     paragraphs: list[str] | None = None,
     tags: list[str] | None = None,
+    is_published: bool = True,
 ) -> CreatePost:
     body = {"paragraphs": paragraphs or ["Hello world."], "links": []}
-    return CreatePost(title=title, body=json.dumps(body), tags=tags or [])
+    return CreatePost(
+        title=title, body=json.dumps(body), tags=tags or [], is_published=is_published
+    )
 
 
 @pytest.fixture
@@ -220,3 +223,34 @@ class TestAddImageToPost:
         image = service.add_image_to_post(existing_post, "photo.jpg", None, None)
         assert image.caption is None
         assert image.alt is None
+
+
+class TestPublishedFiltering:
+    def test_list_posts_excludes_drafts_by_default(self, service):
+        service.create_post(make_post_data("Draft", is_published=False))
+        assert list(service.list_posts()) == []
+
+    def test_list_posts_includes_published(self, service):
+        service.create_post(make_post_data("Live", is_published=True))
+        assert len(service.list_posts()) == 1
+
+    def test_list_posts_only_published_false_returns_all(self, service):
+        service.create_post(make_post_data("Draft", is_published=False))
+        service.create_post(make_post_data("Live", is_published=True))
+        assert len(service.list_posts(only_published=False)) == 2
+
+    def test_get_post_only_published_hides_draft(self, service):
+        post = service.create_post(make_post_data(is_published=False))
+        assert service.get_post(post.slug, only_published=True) is None
+
+    def test_get_post_only_published_false_returns_draft(self, service):
+        post = service.create_post(make_post_data(is_published=False))
+        assert service.get_post(post.slug, only_published=False) is not None
+
+    def test_list_posts_by_tag_excludes_drafts(self, service):
+        service.create_post(make_post_data(tags=["python"], is_published=False))
+        assert list(service.list_posts_by_tag("python")) == []
+
+    def test_list_posts_by_tag_includes_published(self, service):
+        service.create_post(make_post_data(tags=["python"], is_published=True))
+        assert len(service.list_posts_by_tag("python")) == 1
