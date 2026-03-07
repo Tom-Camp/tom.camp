@@ -8,7 +8,7 @@ from sqlmodel import Session
 from werkzeug.utils import secure_filename
 
 from app.models.post import Post
-from app.schemas.post_schemas import CreatePost, ListPost
+from app.schemas.post_schemas import CreatePost, ListPost, UpdatePost
 from app.services.post_service import PostService
 from app.utils.auth import require_admin
 from app.utils.config import settings
@@ -118,6 +118,47 @@ def read_post(slug: str) -> str:
 
         full_post = structure_post_response(post=post)
         return render_template("posts/index.html", post=full_post)
+
+
+@posts_bp.put("/<string:slug>")
+@require_admin
+def update_post(slug: str) -> tuple[dict, int]:
+    data: dict[str, Any] = request.get_json(silent=True) or {}
+    if not data.get("title") or not data.get("body"):
+        abort(400, description="title and body are required")
+
+    with Session(engine) as session:
+        service = PostService(session)
+        post: Post | None = service.get_post(slug)
+        if post is None:
+            abort(404, description="Post not found")
+        assert post is not None
+
+        post_data = UpdatePost(
+            title=data.get("title"),
+            body=json.dumps(data.get("body", {})),
+            tags=data.get("tags", []),
+        )
+        updated = service.update_post(post.id, post_data)
+        assert updated is not None
+
+        logger.info("Post updated: slug={!r}", slug)
+        return updated.model_dump(mode="json"), 200
+
+
+@posts_bp.delete("/<string:slug>")
+@require_admin
+def delete_post(slug: str) -> tuple[dict, int]:
+    with Session(engine) as session:
+        service = PostService(session)
+        post: Post | None = service.get_post(slug)
+        if post is None:
+            abort(404, description="Post not found")
+        assert post is not None
+
+        service.delete_post(post.id)
+        logger.info("Post deleted: slug={!r}", slug)
+        return {}, 204
 
 
 @posts_bp.post("/<string:slug>/images")

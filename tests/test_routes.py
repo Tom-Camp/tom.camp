@@ -325,3 +325,105 @@ class TestUploadImageRoute:
         )
         stored = list(tmp_path.glob("*.jpg"))
         assert len(stored) == 1
+
+
+# ---------------------------------------------------------------------------
+# PUT /posts/<slug>
+# ---------------------------------------------------------------------------
+class TestUpdatePostRoute:
+    def test_requires_auth_header(self, client, test_engine):
+        post = seed_post(test_engine, "Update Auth Post")
+        response = client.put(f"/posts/{post.slug}", json={"title": "T", "body": {}})
+        assert response.status_code == 401
+
+    def test_wrong_key_returns_401(self, client, test_engine):
+        post = seed_post(test_engine, "Update Auth Post")
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"title": "T", "body": {}},
+            headers={"X-Admin-Secret": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    def test_returns_404_for_unknown_slug(self, client):
+        response = client.put(
+            "/posts/no-such-post",
+            json={"title": "T", "body": {"paragraphs": []}},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 404
+
+    def test_missing_title_returns_400(self, client, test_engine):
+        post = seed_post(test_engine, "Missing Title Post")
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"body": {"paragraphs": []}},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 400
+
+    def test_missing_body_returns_400(self, client, test_engine):
+        post = seed_post(test_engine, "Missing Body Post")
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"title": "Updated"},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 400
+
+    def test_updates_post_successfully(self, client, test_engine):
+        post = seed_post(test_engine, "Original Title")
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={"title": "Original Title", "body": {"paragraphs": ["Updated body."]}},
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data["title"] == "Original Title"
+
+    def test_updates_tags(self, client, test_engine):
+        post = seed_post(test_engine, "Tag Update Post", tags=["old"])
+        response = client.put(
+            f"/posts/{post.slug}",
+            json={
+                "title": "Tag Update Post",
+                "body": {"paragraphs": []},
+                "tags": ["new"],
+            },
+            headers=ADMIN_HEADER,
+        )
+        assert response.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# DELETE /posts/<slug>
+# ---------------------------------------------------------------------------
+class TestDeletePostRoute:
+    def test_requires_auth_header(self, client, test_engine):
+        post = seed_post(test_engine, "Delete Auth Post")
+        response = client.delete(f"/posts/{post.slug}")
+        assert response.status_code == 401
+
+    def test_wrong_key_returns_401(self, client, test_engine):
+        post = seed_post(test_engine, "Delete Auth Post")
+        response = client.delete(
+            f"/posts/{post.slug}",
+            headers={"X-Admin-Secret": "wrong-key"},
+        )
+        assert response.status_code == 401
+
+    def test_returns_404_for_unknown_slug(self, client):
+        response = client.delete("/posts/no-such-post", headers=ADMIN_HEADER)
+        assert response.status_code == 404
+
+    def test_deletes_post_successfully(self, client, test_engine):
+        post = seed_post(test_engine, "Post To Delete")
+        response = client.delete(f"/posts/{post.slug}", headers=ADMIN_HEADER)
+        assert response.status_code == 204
+
+    def test_post_no_longer_accessible_after_delete(self, client, test_engine):
+        post = seed_post(test_engine, "Gone Post")
+        client.delete(f"/posts/{post.slug}", headers=ADMIN_HEADER)
+        response = client.get(f"/posts/{post.slug}")
+        assert response.status_code == 404

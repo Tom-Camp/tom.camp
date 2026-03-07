@@ -12,6 +12,7 @@ from app.utils.logging_config import setup_logging
 def create_app() -> Flask:
     setup_logging()
     app = Flask(__name__)
+    app.secret_key = settings.FLASK_SECRET_KEY
     logger.info("Starting {} (env={})", settings.APP_NAME, settings.FLASK_ENV)
 
     app.register_blueprint(posts_bp)

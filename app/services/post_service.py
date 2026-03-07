@@ -123,6 +123,7 @@ class PostService:
             .join(Post.tags)
             .where(Tag.name == tag.strip().lower())
             .options(selectinload(Post.images))
+            .options(selectinload(Post.tags))
             .offset(skip)
             .limit(limit)
             .order_by(self._order_by(order))
