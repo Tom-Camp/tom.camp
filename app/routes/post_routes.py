@@ -1,7 +1,14 @@
 from pathlib import Path
 from typing import Any
 
-from flask import Blueprint, abort, render_template, request, send_from_directory
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    render_template,
+    request,
+    send_from_directory,
+)
 from loguru import logger
 from sqlmodel import Session
 from werkzeug.utils import secure_filename
@@ -11,7 +18,6 @@ from app.schemas.post_schemas import CreatePost, ListPost, UpdatePost
 from app.services.post_service import PostService
 from app.utils.auth import require_admin
 from app.utils.config import settings
-from app.utils.database import engine
 from app.utils.helpers import structure_post_response, truncate_at_boundary
 
 ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
@@ -41,7 +47,7 @@ def create_post() -> tuple[dict, int]:
         is_published=data.get("is_published", False),
     )
 
-    with Session(engine) as session:
+    with Session(current_app.config["ENGINE"]) as session:
         service = PostService(session)
         try:
             post = service.create_post(post_data)
@@ -75,7 +81,7 @@ def _format_posts(posts: list) -> list[ListPost]:
 def list_posts() -> str:
     page = max(1, request.args.get("page", 1, type=int))
     skip = (page - 1) * PAGE_SIZE
-    with Session(engine) as session:
+    with Session(current_app.config["ENGINE"]) as session:
         service = PostService(session)
         batch = service.list_posts(skip=skip, limit=PAGE_SIZE + 1)
         has_next = len(batch) > PAGE_SIZE
@@ -98,7 +104,7 @@ def serve_image(filename: str) -> Any:
 def list_posts_by_tag(tag: str) -> str:
     page = max(1, request.args.get("page", 1, type=int))
     skip = (page - 1) * PAGE_SIZE
-    with Session(engine) as session:
+    with Session(current_app.config["ENGINE"]) as session:
         service = PostService(session)
         batch = service.list_posts_by_tag(tag, skip=skip, limit=PAGE_SIZE + 1)
         has_next = len(batch) > PAGE_SIZE
@@ -115,7 +121,7 @@ def list_posts_by_tag(tag: str) -> str:
 
 @posts_bp.get("/<string:slug>")
 def read_post(slug: str) -> str:
-    with Session(engine) as session:
+    with Session(current_app.config["ENGINE"]) as session:
         service = PostService(session)
 
         post: Post | None = service.get_post(slug, only_published=True)
@@ -135,7 +141,7 @@ def update_post(slug: str) -> tuple[dict, int]:
     if not data:
         abort(400, description="No update data provided")
 
-    with Session(engine) as session:
+    with Session(current_app.config["ENGINE"]) as session:
         service = PostService(session)
         post: Post | None = service.get_post(slug)
         if post is None:
@@ -163,7 +169,7 @@ def update_post(slug: str) -> tuple[dict, int]:
 @posts_bp.delete("/<string:slug>")
 @require_admin
 def delete_post(slug: str) -> tuple[dict, int]:
-    with Session(engine) as session:
+    with Session(current_app.config["ENGINE"]) as session:
         service = PostService(session)
         post: Post | None = service.get_post(slug)
         if post is None:
@@ -178,7 +184,7 @@ def delete_post(slug: str) -> tuple[dict, int]:
 @posts_bp.post("/<string:slug>/images")
 @require_admin
 def upload_image(slug: str) -> tuple[dict, int]:
-    with Session(engine) as session:
+    with Session(current_app.config["ENGINE"]) as session:
         service = PostService(session)
 
         post: Post | None = service.get_post(slug)
