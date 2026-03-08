@@ -1,3 +1,5 @@
+import json
+
 from app.models.post import Post
 from app.schemas.post_schemas import BodyContent, ReadImage, ReadPost
 
@@ -23,9 +25,16 @@ def structure_post_response(post: Post) -> ReadPost:
         ReadImage(filename=img.filename, caption=img.caption, alt=img.alt)
         for img in post.images
     ]
+    # Parse post.body if it's a string
+    body_content = post.body or {}
+    if isinstance(body_content, str):
+        try:
+            body_content = json.loads(body_content)
+        except Exception:
+            body_content = {}
     return ReadPost(
         title=post.title,
-        body=BodyContent.model_validate(post.body or {}),
+        body=BodyContent.model_validate(body_content),
         images=images,
         is_published=post.is_published,
         slug=post.slug,

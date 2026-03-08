@@ -19,13 +19,13 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     line-height: 1.6;
-    color: var(--color-blue);
+    color: #000000;
 }
 
 /* Add any additional custom styles below */
 /* Example: Custom link styles */
 a {
-    color: inherit;
+    color: var(--color-blue);
     text-decoration: none;
 }
 

@@ -42,6 +42,12 @@ def create_app(engine: Engine | None = None) -> Flask:
             return {"error": e.description}, e.code
         return render_template("error.html", code=e.code, message=e.description), e.code
 
+    @app.context_processor
+    def inject_year():
+        from datetime import datetime
+
+        return {"current_year": datetime.now().year}
+
     return app
 
 
