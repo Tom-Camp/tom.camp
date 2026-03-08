@@ -8,3 +8,10 @@ services:
       uv run flask run
       --host 0.0.0.0
       --port 5000
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+    name: shared-db-network
