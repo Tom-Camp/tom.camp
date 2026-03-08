@@ -1,0 +1,11 @@
+{
+  "name": "tom.camp",
+  "private": true,
+  "scripts": {
+    "css:build": "tailwindcss -i app/static/css/tailwind.input.css -o app/static/css/tailwind.css --minify",
+    "css:watch": "tailwindcss -i app/static/css/tailwind.input.css -o app/static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
