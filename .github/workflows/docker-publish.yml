@@ -29,5 +29,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/data.tom.camp:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/data.tom.camp:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/tom.camp:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/tom.camp:${{ github.sha }}
