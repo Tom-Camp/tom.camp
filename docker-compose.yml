@@ -3,16 +3,11 @@ services:
     image: t0mc4mp/tom.camp:latest
     ports:
       - "5000:5000"
-    env_file:
-      - ./.env
     networks:
       - app-network
-    volumes:
-      - uploads_data:${UPLOAD_DIR}
 
 networks:
   app-network:
-    driver: bridge
 
 volumes:
   uploads_data:

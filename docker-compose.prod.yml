@@ -3,7 +3,8 @@ services:
     image: t0mc4mp/tom.camp:latest
     env_file:
       - ./prod.env
-    volumes: []
+    volumes:
+      - uploads_data:${UPLOAD_DIR}
     command: >
       uv run flask run
       --host 0.0.0.0
@@ -15,3 +16,6 @@ networks:
   app-network:
     external: true
     name: shared-db-network
+
+volumes:
+  uploads_data:
