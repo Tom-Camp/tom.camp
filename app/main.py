@@ -7,7 +7,7 @@ from werkzeug.exceptions import HTTPException
 from app.routes.post_routes import posts_bp
 from app.services.post_service import PostService
 from app.utils.config import settings
-from app.utils.database import create_db_and_tables, make_engine
+from app.utils.database import make_engine
 from app.utils.logging_config import setup_logging
 
 
@@ -22,9 +22,6 @@ def create_app(engine: Engine | None = None) -> Flask:
     app.config["ENGINE"] = engine
 
     app.register_blueprint(posts_bp)
-
-    with app.app_context():
-        create_db_and_tables(engine)
 
     @app.get("/")
     def index():
