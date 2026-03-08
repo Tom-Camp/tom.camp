@@ -12,3 +12,4 @@ CLAUDE.md
 .coverage
 app/static/css/tailwind.css
 .env
+GITFLOW.md
