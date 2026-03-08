@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any
 
@@ -64,7 +65,13 @@ PAGE_SIZE = 10
 def _format_posts(posts: list) -> list[ListPost]:
     formatted = []
     for post in posts:
-        paragraphs = (post.body or {}).get("paragraphs", [])
+        body_content = post.body or {}
+        if isinstance(body_content, str):
+            try:
+                body_content = json.loads(body_content)
+            except json.JSONDecodeError:
+                body_content = {}
+        paragraphs = body_content.get("paragraphs", [])
         first_paragraph = paragraphs[0] if paragraphs else ""
         formatted.append(
             ListPost(
@@ -131,6 +138,7 @@ def read_post(slug: str) -> str:
         assert post is not None
 
         full_post = structure_post_response(post=post)
+        logger.info(full_post)
         return render_template("posts/index.html", post=full_post)
 
 
