@@ -10,4 +10,4 @@ COPY . .
 EXPOSE 5000
 
 # nosemgrep: dockerfile.security.missing-user.missing-user
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
+ENTRYPOINT ["./entrypoint.sh"]
