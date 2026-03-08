@@ -10,6 +10,7 @@ wheels/
 .venv
 CLAUDE.md
 .coverage
+node_modules/
 app/static/css/tailwind.css
 .env
 GITFLOW.md
