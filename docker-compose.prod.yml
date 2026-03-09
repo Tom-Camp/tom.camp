@@ -9,15 +9,32 @@ services:
       uv run flask run
       --host 0.0.0.0
       --port 5000
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      tcdata:
+        condition: service_healthy
     networks:
       - app-network
 
-networks:
-  app-network:
-    external: true
-    name: shared-db-network
+  tcdata:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $DB_USER -d $DB_NAME"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
+  postgres_data:
   uploads_data:
+
+networks:
+  app-network:
+    driver: bridge
